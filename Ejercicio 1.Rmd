@@ -51,7 +51,7 @@ summary(flights)
 #### 1. Listar los vuelos que arribaron con un retraso de mas de dos horas.
 
 ```{r Pregunta 1}
-fly_delay <- subset(fligths, fligths$dep_delay>120)
+fly_delay <- subset(fligths, fligths$arr_delay>120)
 dim(fly_delay)
 fly_delay
 ```
@@ -93,7 +93,7 @@ fly_DepOK_ArDelay
 #### 6.Listar los vuelos que a salieron entre medianoche y las 6 am.
 
 ```{r Pregunta 6}
-fly_nocturno <- subset(fligths, (fligths$dep_time>= 0 & fligths$dep_time<= 600 ))
+fly_nocturno <- subset(fligths, ((fligths$dep_time>= 0 & fligths$dep_time<= 600) | fligths$dep_time ==2400))
 dim(fly_nocturno)
 fly_nocturno
 
