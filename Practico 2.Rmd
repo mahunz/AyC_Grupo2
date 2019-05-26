@@ -1,0 +1,222 @@
+---
+title: "Análisis y curación de datos"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Grupo 2
+
+> Integrandes:
+
+* Martín Hunziker
+* Claudio Sarate
+* Ramiro Caro
+
+## Resolución Practico 2 
+
+
+### Importación y estadisticas del dataset
+
+
+```{r summary}
+library(class)
+library(gmodels)
+# Mclust comes with a method of hierarchical clustering. 
+library(mclust)
+library(factoextra)
+library(ggplot2)
+library(gridExtra)
+library(grid)
+
+data <- read.csv("https://archive.ics.uci.edu/ml/machine-learning-databases/wine/wine.data",header=FALSE)
+
+str(data)
+```
+
+
+#### Entendiendo los datos
+
+El dataset es el resultado de un análisis químico de vinos cultivados en la misma región en Italia pero derivados de tres cultivares diferentes. El análisis determinó las cantidades de 13 componentes encontrados en cada uno de los tres tipos de vinos.
+
+Atributos:
+
+Columna           | Descripción
+------------------| -------------
+  V1  |Cultivador  
+  V2  |Alcohol
+ 	V3  |Malic acid
+ 	v4  |Ash
+	v5  |Alcalinity of ash  
+ 	v6  |Magnesium
+	v7  |Total phenols
+ 	v8  |Flavanoids
+ 	v9  |Nonflavanoid phenols
+ 	v10 |Proanthocyanins
+	v11 |Color intensity
+ 	v12 |Hue
+ 	V13 |OD280/OD315 of diluted wines
+ 	v14 |Proline            
+
+```{r echo=TRUE}
+Cultivador <- data$V1
+data <-data[-1]
+
+colnames(data) <- c( "Alcohol", "MalicAcid", "Ash","Alc_Ash","Mg","TotPhenol","Flav","NonFlav","Proa", "ColorInt","Hue","OD","Proline")
+summary(data)
+ 
+
+```
+
+#### Transformación de los datos
+
+Normalizamos las variables
+
+```{r echo=TRUE}
+
+Fscale <- function(x) { scale(x, center = FALSE, scale =  max(x, na.rm = TRUE)/100) } 
+data_n <- data.frame(lapply(data, Fscale))
+summary(data_n[,1])
+summary(data_n[,5])
+
+```
+
+
+#### Determinación aproximada de la cantidad de cluster 
+Para determinar la cantidad de cluster en forma anticipada vamos a utilizar el comando fviz_nbclust de la libreria factoextra que calcula la suma de los cuadrados optenidas como resultado de la clusterización por k-meanss para diferente cantidad de clusters (diferentes k). El cambio de pendiente en la curva  es generalmente considerado como un indicador del número apropiado de clusters.
+```{r echo=TRUE}
+
+fviz_nbclust(data_n, kmeans, method = "wss") +
+geom_vline(xintercept = 3, linetype = 2)
+
+```
+
+Podemos concluir que la cantidad de cluster ideal es 3, que es interesante ya que coincide con la cantidad de productores.
+
+#### Evaluamos el modelo
+
+```{r echo=TRUE}
+set.seed(123)
+Cluster.res <- kmeans(data_n, 3, nstart = 25)
+print(Cluster.res)
+```
+
+Visualizando resultados
+
+```{r echo=TRUE}
+aggregate(data, by=list(cluster=Cluster.res$cluster), mean)
+
+Cluster.res$size # Cluster size
+
+Cluster.res$centers # Cluster means
+
+```
+#### Comparamos la calidad del resultado obtenido
+```{r echo=TRUE}
+table(Cluster.res$cluster, Cultivador)
+```
+
+Podemos observar que la mayor cantidad de errores se dieron para identificar el cultivador 2.
+
+#### Graficando los resultados
+
+Para realizar una representacion XY del resultado de la clusterización, utilizaremos la libreria fviz_cluster que reduce el número de dimensiones aplicando un Análisis de Componente Principal.
+
+```{r echo=TRUE}
+fviz_cluster(Cluster.res, data = data_n,
+palette = c("#2E9FDF", "#00AFBB", "#E7B800", "#FC4E07"),
+ellipse.type = "euclid", # Concentration ellipse
+star.plot = TRUE, # Add segments from centroids to items
+repel = TRUE, # Avoid label overplotting (slow)
+ggtheme = theme_minimal()
+)
+```
+
+En el gráfico queda claramente representado que los puntos que se encuentran en la frontera del cluster son los puntos que fueron clasificados en forma equivocada por el algoritmo kmeans. 
+
+#### Probando el resultado con diferentes k
+
+k=2
+
+```{r echo=TRUE}
+set.seed(123)
+
+Cluster.res_k2 <- kmeans(data_n, 2, nstart = 25)
+Cluster.res_k2$tot.withinss	
+table(Cluster.res_k2$cluster, Cultivador)
+```
+k=3
+
+```{r echo=TRUE}
+Cluster.res_k3 <- kmeans(data_n, 3, nstart = 25)
+Cluster.res_k3$tot.withinss	
+table(Cluster.res_k3$cluster, Cultivador)
+```
+
+
+k=4
+
+```{r echo=TRUE}
+Cluster.res_k4 <- kmeans(data_n, 4, nstart = 25)
+Cluster.res_k4$tot.withinss	
+table(Cluster.res_k4$cluster, Cultivador)
+```
+
+k=5
+
+```{r echo=TRUE}
+Cluster.res_k5 <- kmeans(data_n, 5, nstart = 25)
+Cluster.res_k5$tot.withinss	
+table(Cluster.res_k5$cluster, Cultivador)
+```
+
+k=6
+
+```{r echo=TRUE}
+Cluster.res_k6 <- kmeans(data_n, 6, nstart = 25)
+table(Cluster.res_k6$cluster, Cultivador)
+```
+
+En este caso conluimos que la el criterio utilizado para definir la cantidad de cluster al inicio del práctico es adecuado. 
+
+#### Clusterizando sin normalizar
+
+Analizaremos el efecto que tiene realizar la clusterización sobre los datos originales
+
+```{r echo=TRUE}
+
+Cluster.res_SNor <- kmeans(data, 3, nstart = 25)
+print(Cluster.res_SNor)
+table(Cluster.res_SNor$cluster, Cultivador)
+```
+
+Podemos observar que la clusterizacion empeoró de forma significativa. Visualicemos graficamente los resultados
+
+```{r echo=TRUE}
+
+Plot1 <- fviz_cluster(Cluster.res, data = data_n,
+         palette = c("#2E9FDF", "#00AFBB", "#E7B800", "#FC4E07"),
+         ellipse.type = "euclid", # Concentration ellipse
+         star.plot = TRUE, # Add segments from centroids to items
+         repel = TRUE, # Avoid label overplotting (slow)
+         ggtheme = theme_minimal(),
+         main = "Cluster plot datos normalizados",
+         labelsize = 10
+         )
+Plot2 <- fviz_cluster(Cluster.res_SNor, data = data,
+         palette = c("#2E9FDF", "#00AFBB", "#E7B800", "#FC4E07"),
+         ellipse.type = "euclid", # Concentration ellipse
+         star.plot = TRUE, # Add segments from centroids to items
+         repel = TRUE, # Avoid label overplotting (slow)
+         ggtheme = theme_minimal(),
+         main = "Cluster plot datos originales",
+         labelsize = 10
+         )
+require(cowplot)
+plot_grid(Plot1, Plot2)
+
+```
+
+En esta representación queda muy claro el impacto negativo que tiene la no realización de la normalización de las variables antes de realizar la clusterización.
