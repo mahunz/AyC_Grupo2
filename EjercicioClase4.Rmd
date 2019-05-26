@@ -1,0 +1,135 @@
+---
+title: "Análisis y curación de datos"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Grupo 2
+
+> Integrandes:
+
+* Martín Hunziker
+* Claudio Sarate
+* Ramiro Caro
+
+## Resolución Ejercicio 2 
+
+
+### Importación y estadisticas del dataset
+
+
+```{r summary}
+library(class)
+library(gmodels)
+
+data <- read.csv("http://archive.ics.uci.edu/ml/machine-learning-databases/breast-cancer-wisconsin/wdbc.data",header=FALSE)
+data <- data[-1]
+str(data)
+```
+
+
+#### Entendiendo los datos
+La variable V2 es el diagnóstico, que es lo que se quiere predecir.
+
+```{r echo=TRUE}
+table(data$V2)
+summary(data)
+```
+
+#### Transformación de los datos
+Entendiendo la función scale
+
+```{r echo=TRUE}
+
+Fscale <- function(x) { scale(x, center = FALSE, scale =  max(x, na.rm = TRUE)/100) } 
+
+Fscale(c(1,2,3,4,5))
+Fscale(c(10,20,30,40,50))
+````
+
+#### Transformación de los datos del dataset
+
+```{r echo=TRUE}
+data_n <- data.frame(lapply(data[2:31], Fscale))
+summary(data_n$V3)
+summary(data_n$V8)
+```
+
+#### Entrenando el clasificador
+```{r echo=TRUE}
+data_train <- data_n[1:469, ]
+data_test  <- data_n[470:569, ] 
+
+data_train_labels <- data[1:469, 1]
+data_test_labels  <- data[470:569, 1]
+```
+
+
+#### Evaluamos el modelo
+
+```{r echo=TRUE}
+data_test_pred <- knn(train=data_train, test=data_test, cl=data_train_labels, k=21)
+CrossTable(x=data_test_labels, y=data_test_pred, prop.chisq = FALSE)
+```
+en este caso solo tuvimos 2 casos mal clasificados por el algoritmo. Como el resultado obtenido es el mismo que el resultado con la normalizacion relizada en clase podemos concluir que la normalización no mejora la clasificación. 
+
+#### Evaluamos el modelo k=1
+
+```{r echo=TRUE}
+data_test_pred <- knn(train=data_train, test=data_test, cl=data_train_labels, k=1)
+CrossTable(x=data_test_labels, y=data_test_pred, prop.chisq = FALSE)
+```
+En este caso tenemos 6 errores
+
+#### Evaluamos el modelo k=5
+
+```{r echo=TRUE}
+data_test_pred <- knn(train=data_train, test=data_test, cl=data_train_labels, k=5)
+CrossTable(x=data_test_labels, y=data_test_pred, prop.chisq = FALSE)
+```
+4 errores
+
+#### Evaluamos el modelo k=11
+
+```{r echo=TRUE}
+data_test_pred <- knn(train=data_train, test=data_test, cl=data_train_labels, k=11)
+CrossTable(x=data_test_labels, y=data_test_pred, prop.chisq = FALSE)
+```
+2 errores
+
+#### Evaluamos el modelo k=15
+
+```{r echo=TRUE}
+data_test_pred <- knn(train=data_train, test=data_test, cl=data_train_labels, k=15)
+CrossTable(x=data_test_labels, y=data_test_pred, prop.chisq = FALSE)
+```
+2 errores
+
+#### Evaluamos el modelo k=21
+
+```{r echo=TRUE}
+data_test_pred <- knn(train=data_train, test=data_test, cl=data_train_labels, k=21)
+CrossTable(x=data_test_labels, y=data_test_pred, prop.chisq = FALSE)
+```
+2 errores
+
+A partir del k=11 la cantidad de errores es siempre igual a 2. Luego la mejor cantidad de vecinos a considerar es 11, es decir la menor cantidad de vecinos que genera la mejor predicción.
+
+#### Selección de los datos de validación en forma aleatoria
+```{r echo=TRUE}
+
+data_aleat <-data[sample(nrow(data), size=569, replace=F),] 
+data_aleat_n <- data.frame(lapply(data_aleat[2:31], Fscale))
+
+data_train_a <- data_aleat_n[1:469, ]
+data_test_a  <- data_aleat_n[470:569, ]
+data_train_a_labels <- data_aleat[1:469, 1]
+data_test_a_labels  <- data_aleat[470:569, 1]
+
+data_test_a_pred <- knn(train=data_train_a, test=data_test_a, cl=data_train_a_labels, k=11)
+CrossTable(x=data_test_a_labels, y=data_test_a_pred, prop.chisq = FALSE)
+````
+Con la selección de datos aleatorios la clasificación empeoró en 1 caso
